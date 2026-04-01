@@ -204,3 +204,36 @@ last_trigger_time = 0
 trigger_cooldown = 2.5
 
 hand_missing_frames = 0
+
+# =========================================================
+# MAIN LOOP
+# =========================================================
+with mp_hands.Hands(
+    static_image_mode=False,
+    min_detection_confidence=0.7,
+    min_tracking_confidence=0.7,
+    max_num_hands=1
+) as hands:
+
+    while True:
+        ret, frame = cap.read()
+        if not ret:
+            print("Failed to grab frame")
+            break
+
+        frame = cv2.flip(frame, 1)
+        frame = cv2.resize(frame, (640, 480))
+
+        rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        results = hands.process(rgb_frame)
+
+        hand_found = False
+        hand_label = "None"
+        finger_states = [0, 0, 0, 0, 0]
+        raw_count = 0
+        gesture_text = "None"
+        open_palm_progress = 0.0
+        waving_detected = False
+        wave_debug = "x_range=0.00 dir_changes=0"
+
+        now = time.time()
