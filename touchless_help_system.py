@@ -237,3 +237,26 @@ with mp_hands.Hands(
         wave_debug = "x_range=0.00 dir_changes=0"
 
         now = time.time()
+
+        if results.multi_hand_landmarks and results.multi_handedness:
+            hand_found = True
+            hand_missing_frames = 0
+
+            hand_landmarks = results.multi_hand_landmarks[0]
+            hand_label = results.multi_handedness[0].classification[0].label
+
+            mp_drawing.draw_landmarks(
+                frame,
+                hand_landmarks,
+                mp_hands.HAND_CONNECTIONS
+            )
+
+            raw_count, finger_states = count_fingers(hand_landmarks, hand_label)
+
+            center_x, center_y = get_hand_center(hand_landmarks)
+
+            if len(x_history) > 0:
+                dx = center_x - x_history[-1]
+                dx_history.append(dx)
+
+            x_history.append(center_x)
