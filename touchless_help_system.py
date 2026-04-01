@@ -260,3 +260,19 @@ with mp_hands.Hands(
                 dx_history.append(dx)
 
             x_history.append(center_x)
+
+            if is_open_palm(finger_states):
+                gesture_text = "Open Palm"
+
+                if open_palm_start_time is None:
+                    open_palm_start_time = now
+
+                open_palm_progress = now - open_palm_start_time
+
+                if open_palm_progress >= 3.0 and (now - last_trigger_time) >= trigger_cooldown:
+                    current_mode = "CAREGIVER"
+                    trigger_caregiver_alert()
+                    last_trigger_time = time.time()
+
+            else:
+                open_palm_start_time = None
