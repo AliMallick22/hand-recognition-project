@@ -151,3 +151,56 @@ cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
 # =========================================================
 prev_time = time.time()
 fps = 0.0
+
+# =========================================================
+# GESTURE HELPERS
+# =========================================================
+def count_fingers(hand_landmarks, hand_label):
+    landmarks = hand_landmarks.landmark
+    finger_states = []
+
+    if hand_label == "Right":
+        thumb_up = 1 if landmarks[4].x < landmarks[3].x else 0
+    else:
+        thumb_up = 1 if landmarks[4].x > landmarks[3].x else 0
+
+    finger_states.append(thumb_up)
+
+    finger_tips = [8, 12, 16, 20]
+    finger_pips = [6, 10, 14, 18]
+
+    for tip, pip in zip(finger_tips, finger_pips):
+        is_up = 1 if landmarks[tip].y < landmarks[pip].y else 0
+        finger_states.append(is_up)
+
+    raw_count = sum(finger_states)
+    return raw_count, finger_states
+
+def is_open_palm(finger_states):
+    return finger_states == [1, 1, 1, 1, 1]
+
+def is_two_fingers(finger_states):
+    return finger_states == [0, 1, 1, 0, 0]
+
+def get_hand_center(hand_landmarks):
+    landmarks = hand_landmarks.landmark
+    x = (landmarks[0].x + landmarks[9].x) / 2.0
+    y = (landmarks[0].y + landmarks[9].y) / 2.0
+    return x, y
+
+def is_wave_ready(finger_states):
+    return sum(finger_states) >= 4
+
+# =========================================================
+# STATE VARIABLES
+# =========================================================
+open_palm_start_time = None
+current_mode = "IDLE"
+
+x_history = deque(maxlen=8)
+dx_history = deque(maxlen=7)
+
+last_trigger_time = 0
+trigger_cooldown = 2.5
+
+hand_missing_frames = 0
