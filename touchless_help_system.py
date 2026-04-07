@@ -10,7 +10,6 @@ from gpiozero.tones import Tone
 # =========================================================
 # GPIO SETUP
 # =========================================================
-# I matched these pins to the wiring I planned before.
 GREEN_LED_PIN = 17
 RED_LED_PIN = 27
 WHITE_LED_PIN = 22
@@ -24,15 +23,13 @@ buzzer = TonalBuzzer(BUZZER_PIN)
 # =========================================================
 # EMAIL SETUP
 # =========================================================
-# I left email optional so I can test everything safely first.
-EMAIL_ENABLED = False
+EMAIL_ENABLED = True
 
-SENDER_EMAIL = "your_email@gmail.com"
-SENDER_PASSWORD = "your_app_password"
-RECEIVER_EMAIL = "caregiver_email@gmail.com"
+SENDER_EMAIL = "abczrpp@gmail.com"
+SENDER_PASSWORD = "rnvp dqsf rmrj vkgh"
+RECEIVER_EMAIL = "2008alimallick@gmail.com"
 
 def send_caregiver_email():
-    # I kept this separate so the rest of the system still works even if email is off.
     if not EMAIL_ENABLED:
         print("Email is disabled, so I only showed the caregiver alert locally.")
         return
@@ -59,14 +56,12 @@ def send_caregiver_email():
 # OUTPUT HELPERS
 # =========================================================
 def all_outputs_off():
-    # I use this so only one mode stays active at a time.
     green_led.off()
     red_led.off()
     white_led.off()
     buzzer.stop()
 
 def caregiver_jingle():
-    # I made this a short, calm little melody now that I know my buzzer supports tones.
     notes = ["C5", "E5", "G5", "E5", "C5"]
     lengths = [0.16, 0.16, 0.22, 0.16, 0.22]
 
@@ -77,7 +72,6 @@ def caregiver_jingle():
         time.sleep(0.04)
 
 def emergency_alarm(duration=3.0):
-    # I made this harsher by alternating two high tones quickly.
     start = time.time()
 
     while time.time() - start < duration:
@@ -92,13 +86,11 @@ def emergency_alarm(duration=3.0):
         time.sleep(0.03)
 
 def light_confirmation_tone():
-    # I gave the light action one tiny confirmation tone.
     buzzer.play(Tone("C5"))
     time.sleep(0.08)
     buzzer.stop()
 
 def trigger_caregiver_alert():
-    # I want this one to feel calm and clear.
     all_outputs_off()
     green_led.on()
     print("Caregiver notified")
@@ -106,14 +98,12 @@ def trigger_caregiver_alert():
     send_caregiver_email()
 
 def trigger_emergency_alert():
-    # I want this one to feel urgent and obvious.
     all_outputs_off()
     red_led.on()
     print("Emergency alert activated")
     emergency_alarm(duration=3.0)
 
 def trigger_lights_on():
-    # I kept this simple since it is just simulating room lights.
     all_outputs_off()
     white_led.on()
     print("Lights on")
@@ -123,7 +113,6 @@ def trigger_lights_on():
 # STARTUP TEST
 # =========================================================
 def startup_test():
-    # I do this once so I know all the hardware is alive before the camera starts.
     all_outputs_off()
 
     green_led.on()
@@ -167,11 +156,9 @@ fps = 0.0
 # GESTURE HELPERS
 # =========================================================
 def count_fingers(hand_landmarks, hand_label):
-    # I reused the finger logic because it already worked well.
     landmarks = hand_landmarks.landmark
     finger_states = []
 
-    # I handle thumb differently because it points sideways.
     if hand_label == "Right":
         thumb_up = 1 if landmarks[4].x < landmarks[3].x else 0
     else:
@@ -190,22 +177,18 @@ def count_fingers(hand_landmarks, hand_label):
     return raw_count, finger_states
 
 def is_open_palm(finger_states):
-    # I use all five fingers up for caregiver mode.
     return finger_states == [1, 1, 1, 1, 1]
 
 def is_two_fingers(finger_states):
-    # I use the peace sign for lights on.
     return finger_states == [0, 1, 1, 0, 0]
 
 def get_hand_center(hand_landmarks):
-    # I use a rough center point so I can track side to side movement.
     landmarks = hand_landmarks.landmark
     x = (landmarks[0].x + landmarks[9].x) / 2.0
     y = (landmarks[0].y + landmarks[9].y) / 2.0
     return x, y
 
 def is_wave_ready(finger_states):
-    # I only allow wave detection when the hand is mostly open.
     return sum(finger_states) >= 4
 
 # =========================================================
@@ -214,7 +197,6 @@ def is_wave_ready(finger_states):
 open_palm_start_time = None
 current_mode = "IDLE"
 
-# I keep short motion history so wave detection feels faster.
 x_history = deque(maxlen=8)
 dx_history = deque(maxlen=7)
 
@@ -280,9 +262,6 @@ with mp_hands.Hands(
 
                 x_history.append(center_x)
 
-                # =================================================
-                # CAREGIVER, open palm held for 3 seconds
-                # =================================================
                 if is_open_palm(finger_states):
                     gesture_text = "Open Palm"
 
@@ -299,9 +278,6 @@ with mp_hands.Hands(
                 else:
                     open_palm_start_time = None
 
-                # =================================================
-                # LIGHTS ON, two fingers
-                # =================================================
                 if is_two_fingers(finger_states):
                     gesture_text = "Two Fingers"
 
@@ -310,10 +286,6 @@ with mp_hands.Hands(
                         trigger_lights_on()
                         last_trigger_time = time.time()
 
-                # =================================================
-                # EMERGENCY, waving hand
-                # =================================================
-                # I made this more responsive so it does not wait forever.
                 if len(x_history) >= 6 and len(dx_history) >= 5 and is_wave_ready(finger_states):
                     x_range = max(x_history) - min(x_history)
 
@@ -355,16 +327,10 @@ with mp_hands.Hands(
                     x_history.clear()
                     dx_history.clear()
 
-            # =================================================
-            # IDLE RESET
-            # =================================================
             if not hand_found and (time.time() - last_trigger_time) >= trigger_cooldown:
                 current_mode = "IDLE"
                 all_outputs_off()
 
-            # =================================================
-            # FPS
-            # =================================================
             current_time = time.time()
             dt = current_time - prev_time
             if dt > 0:
@@ -373,9 +339,6 @@ with mp_hands.Hands(
 
             status = "TRACKING" if hand_found else "NO HAND"
 
-            # =================================================
-            # ON SCREEN DISPLAY
-            # =================================================
             cv2.putText(
                 frame,
                 f"Hand: {hand_label}",
