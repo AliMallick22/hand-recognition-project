@@ -276,3 +276,62 @@ with mp_hands.Hands(
 
             else:
                 open_palm_start_time = None
+
+            if is_two_fingers(finger_states):
+                gesture_text = "Two Fingers"
+
+                if (now - last_trigger_time) >= trigger_cooldown:
+                    current_mode = "LIGHTS ON"
+                    trigger_lights_on()
+                    last_trigger_time = time.time()
+
+            if len(x_history) >= 6 and len(dx_history) >= 5 and is_wave_ready(finger_states):
+                x_range = max(x_history) - min(x_history)
+
+                direction_changes = 0
+                previous_direction = 0
+                strong_moves = 0
+
+                for dx in dx_history:
+                    if abs(dx) < 0.012:
+                        continue
+
+                    strong_moves += 1
+                    current_direction = 1 if dx > 0 else -1
+
+                    if previous_direction != 0 and current_direction != previous_direction:
+                        direction_changes += 1
+
+                    previous_direction = current_direction
+
+                wave_debug = f"x_range={x_range:.2f} dir_changes={direction_changes}"
+
+                if x_range > 0.10 and direction_changes >= 2 and strong_moves >= 3:
+                    waving_detected = True
+                    gesture_text = "Waving"
+
+                    if (now - last_trigger_time) >= trigger_cooldown:
+                        current_mode = "EMERGENCY"
+                        trigger_emergency_alert()
+                        last_trigger_time = time.time()
+
+                        x_history.clear()
+                        dx_history.clear()
+
+        else:
+            hand_missing_frames += 1
+            open_palm_start_time = None
+
+            if hand_missing_frames >= 3:
+                x_history.clear()
+                dx_history.clear()
+
+        if not hand_found and (time.time() - last_trigger_time) >= trigger_cooldown:
+            current_mode = "IDLE"
+            all_outputs_off()
+
+        current_time = time.time()
+        dt = current_time - prev_time
+        if dt > 0:
+            fps = 1.0 / dt
+        prev_time = current_time
